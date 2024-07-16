@@ -73,6 +73,14 @@ bool b2Hglt = false;
 bool b3Hglt = false;
 bool in_client = true;
 
+bool hero_killed = false;
+int hero_killed_delay = 500;
+float hero_killed_x = 0;
+
+bool evil_killed = false;
+int evil_killed_delay = 500;
+float evil_killed_x = 0;
+
 int score = 0;
 int mins = 0;
 int secs = 0;
@@ -112,6 +120,7 @@ ID2D1Bitmap* bmpGargoyle2 = nullptr;
 ID2D1Bitmap* bmpOctopus1 = nullptr;
 ID2D1Bitmap* bmpOctopus2 = nullptr;
 ID2D1Bitmap* bmpTree = nullptr;
+ID2D1Bitmap* bmpRip = nullptr;
 /////////////////////////////////////////////////
 
 dll::Hero Warrior = nullptr;
@@ -176,6 +185,7 @@ void ReleaseResources()
     if (!CleanUp(&bmpOctopus1))LogError(L"Error releasing memory for bmpOctopus1");
     if (!CleanUp(&bmpOctopus2))LogError(L"Error releasing memory for bmpOctopus2");
     if (!CleanUp(&bmpTree))LogError(L"Error releasing memory for bmpTree");
+    if (!CleanUp(&bmpRip))LogError(L"Error releasing memory for bmpRip");
 }
 void ErrExit(int what)
 {
@@ -718,6 +728,12 @@ void CreateResources()
             LogError(L"Error loading Walking Tree bitmap");
             ErrExit(eD2D);
         }
+        bmpRip = Load(L".\\res\\img\\Rip.png", Draw);
+        if (!bmpRip)
+        {
+            LogError(L"Error loading Rip bitmap");
+            ErrExit(eD2D);
+        }
     }
 
     if (Draw && bigText && TxtBr)
@@ -796,12 +812,34 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             }
         }
 
+        if (Warrior && !vEvilShots.empty())
+        {
+            for (std::vector<dll::Shot>::iterator shot = vEvilShots.begin(); shot < vEvilShots.end(); shot++)
+            {
+                if (!(Warrior->x >= (*shot)->ex || Warrior->ex <= (*shot)->x ||
+                    Warrior->y >= (*shot)->ey || Warrior->ey <= (*shot)->y))
+                {
+                    if (Warrior->current_action == actions::block)break;
+                    Warrior->lifes -= 30;
+                    (*shot)->Release();
+                    vEvilShots.erase(shot);
+                    if (Warrior->lifes <= 0)
+                    {
+                        hero_killed = true;
+                        hero_killed_x = Warrior->x;
+                        Warrior->Release();
+                        Warrior = nullptr;
+                    }
+                    break;
+                }
+            }
+        }
+
 
         //EVIL************************************
-        if (!Evil && rand() % 300 == 66)
+        if (!Evil && rand() % 150 == 66)
             Evil = reinterpret_cast<dll::Creature>(dll::CreatureFactory(static_cast<types>(rand() % 9 + 1), scr_width - 150.0f));
            
-        
         if (Evil)
         {
             AI_INPUT situation = { 0 };
@@ -859,6 +897,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             Evil->lifes -= 5;
                             if (Evil->lifes <= 0)
                             {
+                                evil_killed = true;
+                                evil_killed_delay = 500;
+                                evil_killed_x = Evil->x;
                                 score += 50;
                                 Evil->Release();
                                 Evil = nullptr;
@@ -881,6 +922,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         Evil->lifes -= 10;
                         if (Evil->lifes <= 0)
                         {
+                            evil_killed = true;
+                            evil_killed_delay = 500;
+                            evil_killed_x = Evil->x;
                             score += 50;
                             Evil->Release();
                             Evil = nullptr;
@@ -1027,8 +1071,27 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 }
             }
 
+            //KILLS ******************************
+            if (evil_killed)
+            {
+                Draw->DrawBitmap(bmpRip, D2D1::RectF(evil_killed_x, scr_height - 217.0f, evil_killed_x + 100.0f, scr_height - 100.0f));
+                evil_killed_delay--;
+                if (evil_killed_delay <= 0)evil_killed = false;
+            }
+
+            if (hero_killed)
+            {
+                Draw->DrawBitmap(bmpRip, D2D1::RectF(hero_killed_x, scr_height - 217.0f, hero_killed_x + 100.0f, 
+                    scr_height - 100.0f));
+                hero_killed_delay--;
+                if (hero_killed_delay <= 0)GameOver();
+            }
+            
             ///////////////////////////////////////////////////
             Draw->EndDraw();
+
+            
+
         }
 
     }
