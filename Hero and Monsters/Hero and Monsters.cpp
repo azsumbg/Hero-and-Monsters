@@ -420,6 +420,26 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
         }
         break;
 
+    case WM_KEYDOWN:
+        if (Warrior)
+        {
+            switch (LOWORD(wParam))
+            {
+            case VK_RIGHT:
+                if (Warrior->current_action != actions::block)Warrior->Move(true);
+                break;
+
+            case VK_LEFT:
+                if (Warrior->current_action != actions::block)Warrior->Move(false);
+                break;
+
+            case VK_SHIFT:
+                if (Warrior->current_action != actions::block)Warrior->Block();
+                break;
+            }
+        }
+        break;
+
     case WM_LBUTTONDOWN:
         if (HIWORD(lParam) <= 50)
         {
@@ -437,6 +457,15 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 
 
         }
+        else
+        {
+            if (Warrior)
+            {
+                if (Warrior->current_action == actions::block)break;
+                vGoodShots.push_back(dll::ShotFactory(types::hero_shot, Warrior->ex, Warrior->y + 40.0f,
+                    (float)(LOWORD(lParam)), (float)(HIWORD(lParam))));
+            }
+        }
         break;
 
     default: return DefWindowProc(hwnd, ReceivedMsg, wParam, lParam);
@@ -444,6 +473,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 
     return (LRESULT)(FALSE);
 }
+
 void CreateResources()
 {
     int wx = static_cast<int>(static_cast<int>(GetSystemMetrics(SM_CXSCREEN) / 2) - static_cast<int>(scr_width / 2));
@@ -726,8 +756,62 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         }
         ////////////////////////////////////////////////////////
 
+        if (!vGoodShots.empty())
+        {
+            for (std::vector<dll::Shot>::iterator good = vGoodShots.begin(); good < vGoodShots.end(); good++)
+            {
+                if (!(*good)->Move())
+                {
+                    (*good)->Release();
+                    vGoodShots.erase(good);
+                    break;
+                }
+            }
+        }
 
 
+        //EVIL************************************
+        if (!Evil && rand() % 300 == 66)
+            Evil = reinterpret_cast<dll::Creature>(dll::CreatureFactory(static_cast<types>(rand() % 9 + 1), scr_width - 150.0f));
+           
+        
+        if (Evil)
+        {
+            AI_INPUT situation = { 0 };
+            if (Warrior)
+            {
+                situation.enemy_ex = Warrior->ex;
+                situation.enemy_lifes = Warrior->lifes;
+                if (!vGoodShots.empty())situation.now_shooting = true;
+            }
+            switch (Evil->AINextMove(situation))
+            {
+            case actions::move:
+                Evil->Move();
+                break;
+
+            case actions::shoot:
+                if (Evil->Shoot())
+                    vEvilShots.push_back(dll::ShotFactory(types::evil_shot, Evil->x, Evil->y + ((Evil->ey - Evil->y) / 2)));
+                break;
+
+            case actions::block:
+                Evil->Block();
+            }
+        }
+
+        if (!vEvilShots.empty())
+        {
+            for (std::vector<dll::Shot>::iterator shot = vEvilShots.begin(); shot < vEvilShots.end(); shot++)
+            {
+                if (!(*shot)->Move())
+                {
+                    (*shot)->Release();
+                    vEvilShots.erase(shot);
+                    break;
+                }
+            }
+        }
 
         //DRAW THINGS ****************************
 
@@ -761,10 +845,78 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             //WARRIOR ***************************
 
             if (Warrior)
+            {
                 Draw->DrawBitmap(bmpHero, D2D1::RectF(Warrior->x, Warrior->y, Warrior->ex, Warrior->ey));
+                if (Warrior->current_action == actions::block)
+                {
+                    Warrior->Block();
+                    Draw->DrawBitmap(bmpHeroShield, D2D1::RectF(Warrior->ex, Warrior->y, Warrior->ex + 55.0f, Warrior->ey));
+                }
+            }
 
+            if (!vGoodShots.empty())
+            {
+                for (std::vector<dll::Shot>::iterator good = vGoodShots.begin(); good < vGoodShots.end(); good++)
+                {
+                    Draw->DrawBitmap(bmpHeroShot, D2D1::RectF((*good)->x, (*good)->y, (*good)->ex, (*good)->ey));
+                }
+            }
 
+            //EVIL *****************************
 
+            if (Evil)
+            {
+                switch (Evil->GetType())
+                {
+                case types::centaur1:
+                    Draw->DrawBitmap(bmpCentaur1, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                case types::centaur2:
+                    Draw->DrawBitmap(bmpCentaur2, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                case types::croc:
+                    Draw->DrawBitmap(bmpCrock, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                case types::gargoyle1:
+                    Draw->DrawBitmap(bmpGargoyle1, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                case types::gargoyle2:
+                    Draw->DrawBitmap(bmpGargoyle2, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                case types::octopus1:
+                    Draw->DrawBitmap(bmpOctopus1, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                case types::octopus2:
+                    Draw->DrawBitmap(bmpOctopus2, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                case types::walking_tree:
+                    Draw->DrawBitmap(bmpTree, D2D1::RectF(Evil->x, Evil->y, Evil->ex, Evil->ey));
+                    break;
+
+                }
+            
+                if (Evil->current_action == actions::block)
+                {
+                    Draw->DrawBitmap(bmpEvilShield, D2D1::RectF(Evil->x, Evil->y - 80.0f, Evil->x + 80.0f, Evil->y));
+                    Evil->Block();
+                }
+            
+            }
+
+            if (!vEvilShots.empty())
+            {
+                for (std::vector<dll::Shot>::iterator shot = vEvilShots.begin(); shot < vEvilShots.end(); shot++)
+                {
+                    Draw->DrawBitmap(bmpEvilShot, D2D1::RectF((*shot)->x, (*shot)->y, (*shot)->ex, (*shot)->ey));
+                }
+            }
 
             ///////////////////////////////////////////////////
             Draw->EndDraw();

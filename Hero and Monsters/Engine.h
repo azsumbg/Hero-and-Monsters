@@ -30,6 +30,7 @@ struct AI_INPUT
 {
 	float enemy_ex;
 	int enemy_lifes;
+	bool now_shooting;
 };
 
 namespace dll
@@ -125,7 +126,6 @@ namespace dll
 	{
 		protected:
 			types my_type = types::no_type;
-			actions current_action = actions::move;
 			float speed = 0;
 
 			CREATURE(types atype, float first_x)
@@ -142,8 +142,8 @@ namespace dll
 					NewDims(150.0f, 150.0f);
 					lifes = 200;
 					strenght = 30;
-					max_shoot_delay = 30;
-					max_block_delay = 30;
+					max_shoot_delay = 400;
+					max_block_delay = 100;
 					speed = 0.5f;
 					break;
 
@@ -152,8 +152,8 @@ namespace dll
 					NewDims(85.0f, 140.0f);
 					lifes = 180;
 					strenght = 27;
-					max_shoot_delay = 25;
-					max_block_delay = 25;
+					max_shoot_delay = 395;
+					max_block_delay = 95;
 					speed = 0.8f;
 					break;
 
@@ -162,8 +162,8 @@ namespace dll
 					NewDims(110.0f, 120.0f);
 					lifes = 160;
 					strenght = 25;
-					max_shoot_delay = 20;
-					max_block_delay = 20;
+					max_shoot_delay = 390;
+					max_block_delay = 90;
 					speed = 1.0f;
 					break;
 
@@ -172,8 +172,8 @@ namespace dll
 					NewDims(95.0f, 130.0f);
 					lifes = 190;
 					strenght = 28;
-					max_shoot_delay = 30;
-					max_block_delay = 30;
+					max_shoot_delay = 500;
+					max_block_delay = 100;
 					speed = 0.5f;
 					break;
 
@@ -182,18 +182,18 @@ namespace dll
 					NewDims(125.0f, 130.0f);
 					lifes = 190;
 					strenght = 30;
-					max_shoot_delay = 27;
-					max_block_delay = 27;
+					max_shoot_delay = 397;
+					max_block_delay = 97;
 					speed = 0.7f; 
 					break;
 
 				case types::octopus1:
-					y = scr_height - 270.0f;
+					y = scr_height - 170.0f;
 					NewDims(150.0f, 70.0f);
 					lifes = 150;
 					strenght = 24;
-					max_shoot_delay = 20;
-					max_block_delay = 20;
+					max_shoot_delay = 380;
+					max_block_delay = 80;
 					speed = 1.0f;
 					break;
 
@@ -202,8 +202,8 @@ namespace dll
 					NewDims(140.0f, 140.0f);
 					lifes = 200;
 					strenght = 30;
-					max_shoot_delay = 30;
-					max_block_delay = 30;
+					max_shoot_delay = 500;
+					max_block_delay = 100;
 					speed = 0.6f;
 					break;
 
@@ -212,8 +212,8 @@ namespace dll
 					NewDims(115.0f, 130.0f);
 					lifes = 190;
 					strenght = 26;
-					max_shoot_delay = 24;
-					max_block_delay = 24;
+					max_shoot_delay = 394;
+					max_block_delay = 94;
 					speed = 0.8f;
 					break;
 				}
@@ -228,6 +228,8 @@ namespace dll
 
 			int max_block_delay = 0;
 			int block_counter = 0;
+
+			actions current_action = actions::move;
 
 			static CREATURE* EvilFactory(types type, float start_x);
 
@@ -271,8 +273,10 @@ namespace dll
 
 			void Move()
 			{
+				current_action = actions::move;
 				x -= speed;
 				SetEdges();
+				current_action = actions::stop;
 			}
 
 			actions AINextMove(AI_INPUT situation)
@@ -283,7 +287,7 @@ namespace dll
 				int to_block = 0;
 				int to_shoot = 0;
 				
-				if (current_action == actions::shoot && shoot_counter > 0 && shoot_counter < max_shoot_delay)
+				if (current_action == actions::shoot && shoot_counter >= 0 && shoot_counter < max_shoot_delay)
 				{
 					proposal = actions::shoot;
 					return proposal;
@@ -294,17 +298,29 @@ namespace dll
 					return proposal;
 				}
 
-				if (x - situation.enemy_ex > 100)
-				{
-					to_move++;
-					to_shoot++;
-				}
-				if (lifes - situation.enemy_lifes < 50)
+				if (x - situation.enemy_ex > 100) to_move++;
+				else if (x - situation.enemy_ex <= 100) to_shoot++;
+				
+				if (situation.enemy_lifes > lifes + 30)
 				{
 					to_move++;
 					to_block++;
 				}
-				else to_shoot++;
+				else
+				{
+					switch (rand() % 2)
+					{
+					case 0:
+						to_shoot++;
+						break;
+
+					case 1:
+						to_move++;
+						break;
+					}
+				}
+
+				if (situation.now_shooting)to_block++;
 				
 				if (to_move > to_block && to_move > to_shoot)proposal = actions::move;
 				else if (to_block > to_move && to_block > to_shoot)proposal = actions::block;
@@ -380,12 +396,12 @@ namespace dll
 	class ENGINE_API HERO :public ATOM
 	{
 		private:
-			int max_block_delay = 50;
+			int max_block_delay = 100;
 			int block_count = 0;
 
 		public:
 			actions current_action = actions::stop;
-			int lifes = 200;
+			int lifes = 220;
 
 			HERO(float start_x) :ATOM(start_x, scr_height - 180.0f, 65.0f, 80.0f){}
 
@@ -393,9 +409,13 @@ namespace dll
 			{
 				delete this;
 			}
-			void Move()
+			void Move(bool forward)
 			{
-				x += 10.0f;
+				if(forward)x += 10.0f;
+				else
+				{
+					if (x - 10.0f >= 0)x -= 10.0f;
+				}
 				SetEdges();
 			}
 			bool Block()
@@ -437,20 +457,20 @@ namespace dll
 				{
 				case types::hero_shot:
 					NewDims(30.0f, 30.0f);
-					speed = 5.0f;
+					speed = 3.0f;
 					dest_x = end_x;
 					dest_y = end_y;
 					if (end_x - x != 0)
 					{
-						slope = (end_y - y) / (end_x - x);
-						intercept = y - slope * x;
-						x_jump_modifier = end_x - x;
+						slope = (end_y - start_y) / (end_x - start_x);
+						intercept = start_y - slope * start_x;
+						x_jump_modifier = end_x - start_x;
 					}
 					break;
 
 				case types::evil_shot:
 					NewDims(60.0f, 22.0f);
-					speed = 3.0f;
+					speed = 2.0f;
 					break;
 				}
 			}
@@ -472,6 +492,8 @@ namespace dll
 				{
 					if (x == dest_x)
 					{
+						if (go_up && y <= dest_y)go_up = false;
+
 						if (go_up)y -= speed;
 						else y += speed;
 						SetEdges();
@@ -479,7 +501,7 @@ namespace dll
 					}
 					else if (x < dest_x)
 					{
-						x -= speed;
+						x += speed;
 						y = x * slope + intercept;
 						SetEdges();
 						if (y > scr_height - 50.0f)return false;
@@ -496,7 +518,7 @@ namespace dll
 					}
 					else if (x > dest_x)
 					{
-						x += speed;
+						x -= speed;
 						y = x * slope + intercept;
 						SetEdges();
 						if (y > scr_height - 50.0f)return false;
