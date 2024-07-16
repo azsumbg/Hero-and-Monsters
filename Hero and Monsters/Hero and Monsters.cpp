@@ -87,6 +87,10 @@ ID2D1SolidColorBrush* TxtBr = nullptr;
 ID2D1SolidColorBrush* HglTxtBr = nullptr;
 ID2D1SolidColorBrush* InactTxtBr = nullptr;
 
+ID2D1SolidColorBrush* LifeBr = nullptr;
+ID2D1SolidColorBrush* HurtBr = nullptr;
+ID2D1SolidColorBrush* CritBr = nullptr;
+
 IDWriteFactory* iWriteFactory = nullptr;
 IDWriteTextFormat* nrmText = nullptr;
 IDWriteTextFormat* bigText = nullptr;
@@ -145,6 +149,10 @@ void ReleaseResources()
     if (!CleanUp(&TxtBr))LogError(L"Error releasing memory for text brush");
     if (!CleanUp(&HglTxtBr))LogError(L"Error releasing memory for highlighted text brush");
     if (!CleanUp(&InactTxtBr))LogError(L"Error releasing memory for inactive text brush");
+
+    if (!CleanUp(&LifeBr))LogError(L"Error releasing memory for Life brush");
+    if (!CleanUp(&CritBr))LogError(L"Error releasing memory for Crit brush");
+    if (!CleanUp(&HurtBr))LogError(L"Error releasing memory for Hurt brush");
 
     if (!CleanUp(&iWriteFactory))LogError(L"Error releasing memory for Write Factory");
     if (!CleanUp(&nrmText))LogError(L"Error releasing memory for normal text format");
@@ -569,6 +577,25 @@ void CreateResources()
                 LogError(L"Error creating TextBrushes");
                 ErrExit(eD2D);
             }
+
+            hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Green), &LifeBr);
+            if (hr != S_OK)
+            {
+                LogError(L"Error creating LifeBrush");
+                ErrExit(eD2D);
+            }
+            hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Yellow), &HurtBr);
+            if (hr != S_OK)
+            {
+                LogError(L"Error creating HurtBrush");
+                ErrExit(eD2D);
+            }
+            hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Red), &CritBr);
+            if (hr != S_OK)
+            {
+                LogError(L"Error creating CritBrush");
+                ErrExit(eD2D);
+            }
         }
 
         hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), 
@@ -813,6 +840,58 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             }
         }
 
+        if (Evil && !vGoodShots.empty())
+        {
+            for (std::vector<dll::Shot>::iterator shot = vGoodShots.begin(); shot < vGoodShots.end(); shot++)
+            {
+                if (!((*shot)->x >= Evil->ex || (*shot)->ex <= Evil->x
+                    || (*shot)->y >= Evil->ey || (*shot)->ey <= Evil->y))
+                {
+                    D2D1_RECT_F damage_area = { Evil->x, Evil->y + 20.0f, Evil->ex, Evil->ey };
+                    if (Evil->current_action == actions::block)
+                    {
+                        if (!((*shot)->x >= damage_area.right || (*shot)->ex <= damage_area.left
+                            || (*shot)->y >= damage_area.bottom || (*shot)->ey <= damage_area.top))
+                        {
+                            (*shot)->Release();
+                            vGoodShots.erase(shot);
+                            score += 5;
+                            Evil->lifes -= 5;
+                            if (Evil->lifes <= 0)
+                            {
+                                score += 50;
+                                Evil->Release();
+                                Evil = nullptr;
+                            }
+                            break;
+                        }
+                        else
+                        {
+                            (*shot)->Release();
+                            vGoodShots.erase(shot);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        (*shot)->Release();
+                        vGoodShots.erase(shot);
+
+                        score += 10;
+                        Evil->lifes -= 10;
+                        if (Evil->lifes <= 0)
+                        {
+                            score += 50;
+                            Evil->Release();
+                            Evil = nullptr;
+                        }
+                        break;
+                    }
+                }
+
+            }
+        }
+
         //DRAW THINGS ****************************
 
         if (Draw)
@@ -836,7 +915,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 else
                     Draw->DrawTextW(L"ПОМОЩ ЗА ИГРАТА", 16, nrmText, b3TxtRect, TxtBr);
             }
-            Draw->DrawBitmap(bmpSky, D2D1::RectF(0, 50.0f, scr_width, scr_height - 100.0f));
+            Draw->DrawBitmap(bmpSky, D2D1::RectF(0, 50.0f, scr_width, scr_height - 95.0f));
             Draw->DrawBitmap(bmpField, D2D1::RectF(0, scr_height - 100.0f, scr_width, scr_height));
             
             
@@ -847,6 +926,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             if (Warrior)
             {
                 Draw->DrawBitmap(bmpHero, D2D1::RectF(Warrior->x, Warrior->y, Warrior->ex, Warrior->ey));
+                if (LifeBr && HurtBr && CritBr)
+                {
+                    if (Warrior->lifes > 150)
+                        Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
+                            D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4),
+                                Warrior->ey + 5.0f), LifeBr, 10.0f);
+                    else if (Evil->lifes > 80)
+                        Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
+                            D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4),  
+                                Warrior->ey + 5.0f), HurtBr, 10.0f);
+                    else
+                        Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
+                            D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4), 
+                                Warrior->ey + 5.0f), LifeBr, 10.0f);
+                }
                 if (Warrior->current_action == actions::block)
                 {
                     Warrior->Block();
@@ -901,7 +995,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     break;
 
                 }
-            
+
+                if (LifeBr && HurtBr && CritBr)
+                {
+                    if (Evil->lifes > 120)
+                        Draw->DrawLine(D2D1::Point2F(Evil->x, Evil->ey + 5.0f),
+                            D2D1::Point2F(Evil->x + static_cast<float>(Evil->lifes / 4), 
+                                Evil->ey + 5.0f), LifeBr, 10.0f);
+                    else if (Evil->lifes > 60)
+                        Draw->DrawLine(D2D1::Point2F(Evil->x, Evil->ey + 5.0f),
+                            D2D1::Point2F(Evil->x + static_cast<float>(Evil->lifes / 4), 
+                                Evil->ey + 5.0f), HurtBr, 10.0f);
+                    else
+                        Draw->DrawLine(D2D1::Point2F(Evil->x, Evil->ey + 5.0f),
+                            D2D1::Point2F(Evil->x + static_cast<float>(Evil->lifes / 4), 
+                                Evil->ey + 5.0f), CritBr, 10.0f);
+                }
                 if (Evil->current_action == actions::block)
                 {
                     Draw->DrawBitmap(bmpEvilShield, D2D1::RectF(Evil->x, Evil->y - 80.0f, Evil->x + 80.0f, Evil->y));
