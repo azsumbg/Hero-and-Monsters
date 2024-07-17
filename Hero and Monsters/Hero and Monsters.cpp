@@ -73,7 +73,7 @@ bool b3Hglt = false;
 bool in_client = true;
 
 bool hero_killed = false;
-int hero_killed_delay = 500;
+int hero_killed_delay = 400;
 float hero_killed_x = 0;
 
 bool evil_killed = false;
@@ -239,11 +239,72 @@ void InitGame()
 
     Warrior = reinterpret_cast<dll::Hero>(dll::CreatureFactory(types::hero, 100.0f));
 }
+BOOL CheckRecord()
+{
+    if (score < 1) return no_record;
 
+    int result = 0;
+    CheckFile(record_file, &result);
+    if (result == FILE_NOT_EXIST)
+    {
+        std::wofstream rec(record_file);
+        rec << score << std::endl;
+        for (int i = 0; i < 16; i++)rec << static_cast<int>(current_player[i]) << std::endl;
+        rec.close();
+        return first_record;
+    }
+    else
+    {
+        std::wifstream check(record_file);
+        check >> result;
+        check.close();
+        if (score > result)
+        {
+            std::wofstream rec(record_file);
+            rec << score << std::endl;
+            for (int i = 0; i < 16; i++)rec << static_cast<int>(current_player[i]) << std::endl;
+            rec.close();
+            return record;
+        }
+    }
+
+    return no_record;
+}
 void GameOver()
 {
     KillTimer(bHwnd, bTimer);
     PlaySound(NULL, NULL, NULL);
+    if (secs > 120)score += 5 * secs;
+
+    wchar_t fin_txt[27] = L"ФАНТАСМАГОРИИТЕ ПОБЕДИХА !";
+    int txt_size = 27;
+
+    switch (CheckRecord())
+    {
+    case no_record:
+        if (sound)PlaySound(L".\\res\\snd\\loose.wav", NULL, SND_ASYNC);
+        break;
+
+    case first_record:
+        if (sound)PlaySound(L".\\res\\snd\\record.wav", NULL, SND_ASYNC);
+        wcscpy_s(fin_txt, L"ПЪРВИ РЕКОРД НА ИГРАТА !");
+        txt_size = 25;
+        break;
+
+    case record:
+        if (sound)PlaySound(L".\\res\\snd\\record.wav", NULL, SND_ASYNC);
+        wcscpy_s(fin_txt, L"НОВ РЕКОРД НА ИГРАТА !");
+        txt_size = 23;
+        break;
+    }
+
+    Draw->BeginDraw();
+    Draw->Clear(D2D1::ColorF(D2D1::ColorF::SandyBrown));
+    if (bigText && TxtBr)
+        Draw->DrawTextW(fin_txt, txt_size, bigText, D2D1::RectF(50.0f, scr_height / 2 - 50.0f,
+            scr_width, scr_height), TxtBr);
+    Draw->EndDraw();
+    Sleep(6800);
 
     bMsg.message = WM_QUIT;
     bMsg.wParam = 0;
@@ -625,7 +686,7 @@ void CreateResources()
                 ErrExit(eD2D);
             }
 
-            iWriteFactory->CreateTextFormat(L"GABRIOLA", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_OBLIQUE,
+            iWriteFactory->CreateTextFormat(L"GABRIOLA", NULL, DWRITE_FONT_WEIGHT_EXTRA_BOLD, DWRITE_FONT_STYLE_OBLIQUE,
                 DWRITE_FONT_STRETCH_NORMAL, 64, L"", &bigText);
             if (hr != S_OK)
             {
@@ -1147,7 +1208,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 Draw->DrawBitmap(bmpRip, D2D1::RectF(hero_killed_x, scr_height - 217.0f, hero_killed_x + 100.0f, 
                     scr_height - 100.0f));
                 hero_killed_delay--;
-                if (hero_killed_delay <= 0)GameOver();
+                if (hero_killed_delay <= 0)
+                {
+                    Draw->EndDraw();
+                    GameOver();
+                }
             }
             
             ///////////////////////////////////////////////////
