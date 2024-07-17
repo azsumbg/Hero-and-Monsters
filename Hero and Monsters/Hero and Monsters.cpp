@@ -478,6 +478,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
             if (Warrior)
             {
                 if (Warrior->current_action == actions::block)break;
+                if (sound)mciSendString(L"play .\\res\\snd\\shoot.wav", NULL, NULL, NULL);
                 vGoodShots.push_back(dll::ShotFactory(types::hero_shot, Warrior->ex, Warrior->y + 40.0f,
                     (float)(LOWORD(lParam)), (float)(HIWORD(lParam))));
             }
@@ -863,7 +864,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
             case actions::shoot:
                 if (Evil->Shoot())
+                {
                     vEvilShots.push_back(dll::ShotFactory(types::evil_shot, Evil->x, Evil->y + ((Evil->ey - Evil->y) / 2)));
+                    if (sound)mciSendString(L"play .\\res\\snd\\shoot.wav", NULL, NULL, NULL);
+                }
                 break;
 
             case actions::block:
@@ -1004,7 +1008,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
                             D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4),
                                 Warrior->ey + 5.0f), LifeBr, 10.0f);
-                    else if (Evil->lifes > 40)
+                    else if (Warrior->lifes > 60)
                         Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
                             D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4),  
                                 Warrior->ey + 5.0f), HurtBr, 10.0f);
