@@ -7,6 +7,7 @@
 #endif
 
 #include <cstdlib>
+#include <ctime>
 
 constexpr float scr_width = 800.0f;
 constexpr float scr_height = 700.0f;
@@ -142,7 +143,7 @@ namespace dll
 					NewDims(150.0f, 150.0f);
 					lifes = 200;
 					strenght = 30;
-					max_shoot_delay = 400;
+					max_shoot_delay = 200;
 					max_block_delay = 100;
 					speed = 0.5f;
 					break;
@@ -152,7 +153,7 @@ namespace dll
 					NewDims(85.0f, 140.0f);
 					lifes = 180;
 					strenght = 27;
-					max_shoot_delay = 395;
+					max_shoot_delay = 195;
 					max_block_delay = 95;
 					speed = 0.8f;
 					break;
@@ -162,7 +163,7 @@ namespace dll
 					NewDims(110.0f, 120.0f);
 					lifes = 160;
 					strenght = 25;
-					max_shoot_delay = 390;
+					max_shoot_delay = 190;
 					max_block_delay = 90;
 					speed = 1.0f;
 					break;
@@ -172,7 +173,7 @@ namespace dll
 					NewDims(95.0f, 130.0f);
 					lifes = 190;
 					strenght = 28;
-					max_shoot_delay = 500;
+					max_shoot_delay = 200;
 					max_block_delay = 100;
 					speed = 0.5f;
 					break;
@@ -182,7 +183,7 @@ namespace dll
 					NewDims(125.0f, 130.0f);
 					lifes = 190;
 					strenght = 30;
-					max_shoot_delay = 397;
+					max_shoot_delay = 197;
 					max_block_delay = 97;
 					speed = 0.7f; 
 					break;
@@ -192,7 +193,7 @@ namespace dll
 					NewDims(150.0f, 70.0f);
 					lifes = 150;
 					strenght = 24;
-					max_shoot_delay = 380;
+					max_shoot_delay = 180;
 					max_block_delay = 80;
 					speed = 1.0f;
 					break;
@@ -202,7 +203,7 @@ namespace dll
 					NewDims(140.0f, 140.0f);
 					lifes = 200;
 					strenght = 30;
-					max_shoot_delay = 500;
+					max_shoot_delay = 280;
 					max_block_delay = 100;
 					speed = 0.6f;
 					break;
@@ -212,7 +213,7 @@ namespace dll
 					NewDims(115.0f, 130.0f);
 					lifes = 190;
 					strenght = 26;
-					max_shoot_delay = 394;
+					max_shoot_delay = 194;
 					max_block_delay = 94;
 					speed = 0.8f;
 					break;
@@ -320,7 +321,19 @@ namespace dll
 					}
 				}
 
-				if (situation.now_shooting)to_block++;
+				if (situation.now_shooting)
+				{
+					switch (rand() % 2)
+					{
+					case 0:
+						to_shoot++;
+						break;
+
+					case 1:
+						to_block++;
+						break;
+					}
+				}
 				
 				if (to_move > to_block && to_move > to_shoot)proposal = actions::move;
 				else if (to_block > to_move && to_block > to_shoot)proposal = actions::block;

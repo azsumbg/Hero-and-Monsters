@@ -291,8 +291,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
     {
     case WM_CREATE:
         SetTimer(hwnd, bTimer, 1000, NULL);
-        srand((unsigned int)(time(0)));
-
+       
         bBar = CreateMenu();
         bMain = CreateMenu();
         bStore = CreateMenu();
@@ -819,12 +818,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 if (!(Warrior->x >= (*shot)->ex || Warrior->ex <= (*shot)->x ||
                     Warrior->y >= (*shot)->ey || Warrior->ey <= (*shot)->y))
                 {
-                    if (Warrior->current_action == actions::block)break;
+                    if (Warrior->current_action == actions::block)
+                    {
+                        (*shot)->Release();
+                        vEvilShots.erase(shot);
+                        break;
+                    }
                     Warrior->lifes -= 30;
                     (*shot)->Release();
                     vEvilShots.erase(shot);
                     if (Warrior->lifes <= 0)
                     {
+                        if (sound)mciSendString(L"play .\\res\\snd\\hkilled.wav", NULL, NULL, NULL);
                         hero_killed = true;
                         hero_killed_x = Warrior->x;
                         Warrior->Release();
@@ -901,6 +906,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                                 evil_killed_delay = 500;
                                 evil_killed_x = Evil->x;
                                 score += 50;
+                                if (sound)mciSendString(L"play .\\res\\snd\\ekilled.wav", NULL, NULL, NULL);
                                 Evil->Release();
                                 Evil = nullptr;
                             }
@@ -983,7 +989,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     else
                         Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
                             D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4), 
-                                Warrior->ey + 5.0f), LifeBr, 10.0f);
+                                Warrior->ey + 5.0f), CritBr, 10.0f);
                 }
                 if (Warrior->current_action == actions::block)
                 {
@@ -1070,6 +1076,37 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     Draw->DrawBitmap(bmpEvilShot, D2D1::RectF((*shot)->x, (*shot)->y, (*shot)->ex, (*shot)->ey));
                 }
             }
+
+            //STATUS *****************************
+
+            wchar_t status[150] = L"ВОЙНИК: ";
+            wchar_t add[5] = L"\0";
+            int txt_size = 0;
+
+            wcscat_s(status, current_player);
+            
+            wcscat_s(status, L", ВРЕМЕ: ");
+            if (mins < 10)wcscat_s(status, L"0");
+            wsprintf(add, L"%d", mins);
+            wcscat_s(status, add);
+
+            wcscat_s(status, L" : ");
+            if (secs - mins * 60 < 10)wcscat_s(status, L"0");
+            wsprintf(add, L"%d", secs - mins * 60);
+            wcscat_s(status, add);
+
+            wcscat_s(status, L", РЕЗУЛТАТ: ");
+            wsprintf(add, L"%d", score);
+            wcscat_s(status, add);
+
+            for (int i = 0; i < 150; i++)
+            {
+                if (status[i] != '\0')txt_size++;
+                else break;
+            }
+
+            if (nrmText && HglTxtBr)
+                Draw->DrawTextW(status, txt_size, nrmText, D2D1::RectF(30.0f, scr_height - 80.0f, scr_width, scr_height), HglTxtBr);
 
             //KILLS ******************************
             if (evil_killed)
