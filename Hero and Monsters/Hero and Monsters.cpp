@@ -9,7 +9,6 @@
 #include "Engine.h"
 #include <vector>
 #include <fstream>
-#include <ctime>
 #include <chrono>
 
 #pragma comment (lib, "winmm.lib")
@@ -942,6 +941,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             }
         }
 
+        if (Evil && Warrior)
+        {
+            if (!(Warrior->x >= Evil->ex || Warrior->ex <= Evil->x || Warrior->y >= Evil->ey || Warrior->ey <= Evil->y))
+            {
+                Evil->x += 50.0f;
+                Evil->SetEdges();
+                Warrior->lifes -= 50;
+                if (Warrior->lifes <= 0)
+                {
+                    if (sound)mciSendString(L"play .\\res\\snd\\hkilled.wav", NULL, NULL, NULL);
+                    hero_killed = true;
+                    hero_killed_x = Warrior->x;
+                    Warrior->Release();
+                    Warrior = nullptr;
+                }
+            }
+        }
+
         //DRAW THINGS ****************************
 
         if (Draw)
@@ -982,7 +999,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
                             D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4),
                                 Warrior->ey + 5.0f), LifeBr, 10.0f);
-                    else if (Evil->lifes > 80)
+                    else if (Evil->lifes > 40)
                         Draw->DrawLine(D2D1::Point2F(Warrior->x, Warrior->ey + 5.0f),
                             D2D1::Point2F(Warrior->x + static_cast<float>(Warrior->lifes / 4),  
                                 Warrior->ey + 5.0f), HurtBr, 10.0f);
