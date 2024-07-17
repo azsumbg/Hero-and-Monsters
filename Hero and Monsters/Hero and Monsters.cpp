@@ -819,10 +819,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 {
                     if (Warrior->current_action == actions::block)
                     {
+                        if (sound)mciSendString(L"play .\\res\\snd\\shield.wav", NULL, NULL, NULL);
                         (*shot)->Release();
                         vEvilShots.erase(shot);
                         break;
                     }
+                    if (sound)mciSendString(L"play .\\res\\snd\\hhurt.wav", NULL, NULL, NULL);
                     Warrior->lifes -= 30;
                     (*shot)->Release();
                     vEvilShots.erase(shot);
@@ -895,6 +897,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         if (!((*shot)->x >= damage_area.right || (*shot)->ex <= damage_area.left
                             || (*shot)->y >= damage_area.bottom || (*shot)->ey <= damage_area.top))
                         {
+                            if (sound)mciSendString(L"play .\\res\\snd\\ehurt.wav", NULL, NULL, NULL);
                             (*shot)->Release();
                             vGoodShots.erase(shot);
                             score += 5;
@@ -913,6 +916,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         }
                         else
                         {
+                            if (sound)mciSendString(L"play .\\res\\snd\\shield.wav", NULL, NULL, NULL);
                             (*shot)->Release();
                             vGoodShots.erase(shot);
                             break;
@@ -922,7 +926,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     {
                         (*shot)->Release();
                         vGoodShots.erase(shot);
-
+                        if (sound)mciSendString(L"play .\\res\\snd\\ehurt.wav", NULL, NULL, NULL);
                         score += 10;
                         Evil->lifes -= 10;
                         if (Evil->lifes <= 0)
@@ -945,6 +949,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         {
             if (!(Warrior->x >= Evil->ex || Warrior->ex <= Evil->x || Warrior->y >= Evil->ey || Warrior->ey <= Evil->y))
             {
+                if (sound)mciSendString(L"play .\\res\\snd\\hhurt.wav", NULL, NULL, NULL);
                 Evil->x += 50.0f;
                 Evil->SetEdges();
                 Warrior->lifes -= 50;
